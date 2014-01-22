@@ -1,0 +1,105 @@
+\documentclass[a4paper,12pt]{article}
+
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{wrapfig}
+
+\begin{document}
+\title{DD2447 Project: Gibbs Sampler}
+\author{Alden Coots}
+\date{22 January 2013}
+\maketitle
+
+The following generative model generates $K$ sequences of length $N: \mathbf{s}_1,\cdots,\mathbf{s}_K$ where $\mathbf{s}_i = s_{i,1},\cdots,s_{i,N}$.
+All sequences are over the alphabet $[M]$.
+Each of these sequences has a ``magic'' word of length $w$ hidden in it.
+The rest of the sequence is background.
+
+First for each i, a start position $r_i$ for the magic word is sampled uniformly from $[N-w+1]$.
+Then the j:th positions in the magic words are sampled from $q_j(x)$, which is Cat$(\mathbf{x}|\theta_j)$ where $\theta_j$ has a Dir($\theta_j|\alpha$) prior.
+All other positions in the sequences are sampled from the background distribution q(x), which is Cat($\mathbf{x}|\theta$) where $\theta$ has a Dir($\theta|\alpha'$) prior.
+This can be done with a call to \texttt{generate(num\_seq, seq\_length, alphabet, m\_word\_length, m\_word\_param, background\_param)}
+
+	\begin{table}[h!]
+		\centering
+		\begin{tabular} {|c c c c c c c c c c|}
+			\hline
+			C & C & C & G & G & C & G & A & A & A \\ 
+			G & C & A & C & G & G & G & T & G & G \\
+			G & C & C & T & A & T & A & C & A & G \\
+			A & G & T & A & G & A & C & T & G & A \\
+			G & G & C & C & T & C & T & A & A & A \\
+			G & A & A & C & C & C & C & G & G & G \\
+			A & G & G & C & G & G & G & A & C & C \\
+			A & A & G & A & G & A & C & C & G & G \\
+			A & C & C & G & T & A & C & C & C & A \\
+			G & A & G & C & G & G & G & A & G & T \\
+			C & T & C & C & C & C & T & G & G & A \\
+			A & T & G & A & G & A & G & G & A & A \\
+			G & C & G & C & G & G & G & A & T & A \\
+			G & C & C & T & G & G & A & G & C & A \\
+			A & G & A & C & G & C & T & G & C & A \\
+			\hline
+		\end{tabular}
+		\caption{15 sequences of length 10 with hidden word of size 5 generated from alphabet $[$A, C, G, T$]$ with $\alpha = [1,2,2,1]$ and $\alpha' = [1,1,1,1]$}
+	\end{table}
+
+
+The posterior over starting positions is then estimated using a collapsed Gibbs sampler,
+by repeatedly updating all magic word starting positions, $R$, by sampling $P(r_z|\mathcal{D}_{-z},R_{-z},\alpha)$ for each sequence $s_z$ from $s_1$ to $s_K$ in random order.
+This is accomplished by passing the result of \texttt{generate(\ldots)} as the \texttt{pos\_sequences} parameter to \texttt{gibbssample(num\_iters, pos\_sequences, alphabet, m\_word\_length, m\_word\_param, background\_param)}.
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=5in]{60}
+	\caption{Graph showing convergence behavior of 10 random initializations of starting positions for a 4 letter alphabet with $\alpha = [1,2,2,1]$ and $\alpha' = [1,1,1,1]$}
+\end{figure}
+
+\begin{figure}[h]
+		\centering
+		\begin{subfigure}[b]{0.8\textwidth}
+				\centering
+				\includegraphics[width=\textwidth]{log10}
+				\caption{All initializations are likely converged}
+		\end{subfigure}
+		\begin{subfigure}[b]{0.8\textwidth}
+				\centering
+				\includegraphics[width=\textwidth]{log15}
+				\caption{Blue and green initializtions get stuck in local maxima. The black, red, and purple manage to escape their local modes}
+		\end{subfigure}
+		\caption{4 letter alphabet with $\alpha = [1,2,2,1]$ and $\alpha' = [1,1,1,1]$}
+\end{figure}
+
+\begin{figure}[h]
+	\begin{subfigure}[b]{0.8\textwidth}
+		\centering
+		\includegraphics[width=5in]{wl2}
+	\end{subfigure}
+	\begin{subfigure}[b]{0.8\textwidth}
+		\centering
+		\includegraphics[width=5in]{param24}
+	\end{subfigure}
+	\caption{Moderate changes in hidden word length and hidden word parameter value appear to have no significant effect on the number of iterations to possible convergence.}
+\end{figure}
+
+
+\begin{figure}[h]
+	\begin{subfigure}[b]{0.8\textwidth}
+		\centering
+		\includegraphics[width=5in]{alph2mrah4}
+		\caption{4 letter alphabet with $\alpha = [34,2,6,21]$ and $\alpha' = [2,12,9,3]$. Altering both $\alpha$ and $\alpha'$ makes convergence more difficult.}
+	\end{subfigure}
+	\begin{subfigure}[b]{0.8\textwidth}
+		\centering
+		\includegraphics[width=5in]{alph26}
+		\caption{4 letter alphabet with $\alpha = [34,2,6,21]$ and $\alpha' = [1,1,1,1]$. Increasing the number of sequences helps to speed up convergence, although some initializations get easily stuck in local modes}
+	\end{subfigure}
+\end{figure}
+
+As the number of iterations grows large, the chance that the algorithm has converged becomes greater;
+however, at any given number of iterations, there is no guarantee that the stationary distribution has been reached.
+As evidenced by many of the figures, the distribution often gets stuck in local modes.
+By calculating the posterior over starting positions with several different random initializations,
+the likelihood of determining the correct starting positions of the magic words is increased.
+
+\end{document}
